@@ -27,7 +27,8 @@ RUNBOOK_DIR = os.path.join(PERSONAL_DIR, "runbook")
 # respecting that boundary themselves.
 _DEFAULT_VAULT_ROOTS = [
     os.path.expanduser("~/Documents/Obsidian/learning"),
-    os.path.expanduser("~/Documents/Obsidian/ai-improvement"),
+    # ai-improvement merged into learning/ai-improvement 2026-08-09
+    # (workstream 20/21) — already covered by the learning root above.
     os.path.expanduser("~/Documents/Obsidian/finance"),
     os.path.expanduser("~/Documents/Obsidian/pytheas"),
     os.path.expanduser("~/Documents/Obsidian/agonizing-sentience"),

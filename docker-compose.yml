@@ -20,8 +20,10 @@ services:
       # personal_docs ingestion (src/personal_docs.py) can see them. Excludes
       # personal/personal-private per that vault's CLAUDE.md AI-access rules.
       # Mount paths here must match CHIRON_VAULT_ROOTS below.
+      # ai-improvement/ merged into learning/ai-improvement on 2026-08-09
+      # (workstream 20/21 restructure) — already covered by the learning
+      # mount below, no separate mount needed.
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/learning:/app/vaults/learning:ro
-      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/ai-improvement:/app/vaults/ai-improvement:ro
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/finance:/app/vaults/finance:ro
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/pytheas:/app/vaults/pytheas:ro
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/agonizing-sentience:/app/vaults/agonizing-sentience:ro
@@ -40,7 +42,7 @@ services:
       - HF_TOKEN=${HF_TOKEN:-}
       - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
       - SEARXNG_INSTANCE=http://searxng:8080
-      - CHIRON_VAULT_ROOTS=/app/vaults/learning:/app/vaults/ai-improvement:/app/vaults/finance:/app/vaults/pytheas:/app/vaults/agonizing-sentience:/app/vaults/card-flip:/app/vaults/minecraft-event
+      - CHIRON_VAULT_ROOTS=/app/vaults/learning:/app/vaults/finance:/app/vaults/pytheas:/app/vaults/agonizing-sentience:/app/vaults/card-flip:/app/vaults/minecraft-event
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
