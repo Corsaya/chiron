@@ -2,7 +2,7 @@ services:
   odysseus:
     build: .
     ports:
-      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-7000}:7000"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-7001}:7000"
     volumes:
       - ${APP_DATA_DIR:-./data}:/app/data:z
       - ${APP_LOGS_DIR:-./logs}:/app/logs:z
@@ -16,6 +16,17 @@ services:
       # land under /app/.local for the odysseus user. Persist them so a
       # container recreate does not silently remove installed serve engines.
       - ${APP_DATA_DIR:-./data}/local:/app/.local:z
+      # Chiron addition: read-only mounts of Donovan's Obsidian vaults, so
+      # personal_docs ingestion (src/personal_docs.py) can see them. Excludes
+      # personal/personal-private per that vault's CLAUDE.md AI-access rules.
+      # Mount paths here must match CHIRON_VAULT_ROOTS below.
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/learning:/app/vaults/learning:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/ai-improvement:/app/vaults/ai-improvement:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/finance:/app/vaults/finance:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/pytheas:/app/vaults/pytheas:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/agonizing-sentience:/app/vaults/agonizing-sentience:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/card-flip:/app/vaults/card-flip:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/minecraft-event:/app/vaults/minecraft-event:ro
     extra_hosts:
       # Lets the container reach local services on the Docker host, including
       # Ollama at http://host.docker.internal:11434.
@@ -29,6 +40,7 @@ services:
       - HF_TOKEN=${HF_TOKEN:-}
       - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
       - SEARXNG_INSTANCE=http://searxng:8080
+      - CHIRON_VAULT_ROOTS=/app/vaults/learning:/app/vaults/ai-improvement:/app/vaults/finance:/app/vaults/pytheas:/app/vaults/agonizing-sentience:/app/vaults/card-flip:/app/vaults/minecraft-event
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
@@ -84,7 +96,7 @@ services:
   chromadb:
     image: docker.io/chromadb/chroma:latest
     ports:
-      - "${CHROMADB_BIND:-127.0.0.1}:8100:8000"
+      - "${CHROMADB_BIND:-127.0.0.1}:8101:8000"
     volumes:
       - chromadb-data:/chroma/chroma
     environment:
@@ -112,7 +124,7 @@ services:
         fi
         exec /usr/local/searxng/entrypoint.sh
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8080"
     volumes:
       - searxng-data:/etc/searxng
       - ./config/searxng/settings.yml:/tmp/searxng-settings.yml.template:ro,z
@@ -145,11 +157,11 @@ services:
     image: docker.io/binwiederhier/ntfy
     command: serve
     ports:
-      - "${NTFY_BIND:-127.0.0.1}:8091:80"
+      - "${NTFY_BIND:-127.0.0.1}:8092:80"
     volumes:
       - ntfy-cache:/var/cache/ntfy
     environment:
-      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://localhost:8091}
+      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://localhost:8092}
     restart: unless-stopped
 
 volumes:

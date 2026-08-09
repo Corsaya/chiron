@@ -73,6 +73,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         is_document_pdf_preview = path.startswith("/api/document/") and path.endswith("/render-pdf")
         # Visual report pages are self-contained HTML — need inline scripts + external images
         is_report = path.startswith("/api/research/report/")
+        # Chiron addition: classroom custom apps (routes/classroom_routes.py
+        # CUSTOM_APPS) are ported standalone tools (e.g. sat-test.js) that
+        # use inline onclick/oninput handlers throughout. Same carve-out
+        # rationale as is_report: self-contained, not user-content-driven.
+        is_classroom_app = path.startswith("/static/classroom-apps/")
 
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -85,7 +90,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if is_https:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
-        if is_report:
+        if is_report or is_classroom_app:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline'; "

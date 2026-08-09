@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 from src.constants import (
     DATA_DIR, PERSONAL_DIR, RUNBOOK_DIR, UPLOAD_DIR,
-    SESSIONS_FILE, DEFAULT_HOST, OPENAI_API_KEY
+    SESSIONS_FILE, DEFAULT_HOST, OPENAI_API_KEY, VAULT_ROOTS
 )
 from src.memory import MemoryManager
 from src.memory_provider import MemoryProviderRegistry, NativeMemoryProvider
@@ -53,6 +53,22 @@ def initialize_managers(base_dir: str, rag_manager=None) -> Dict[str, Any]:
     session_manager.upload_handler = upload_handler
     set_upload_handler(upload_handler)
     personal_docs_manager = PersonalDocsManager(PERSONAL_DIR, rag_manager)
+
+    # Chiron addition: auto-register configured Obsidian vault roots on
+    # startup so they're ingested without a manual "add directory" API call.
+    # add_directory() is a no-op if a root is already tracked, so this is
+    # safe to run on every startup.
+    for vault_root in VAULT_ROOTS:
+        try:
+            personal_docs_manager.add_directory(vault_root, index=True)
+        except Exception as e:
+            logger.warning(f"Failed to auto-register vault root {vault_root}: {e}")
+
+    # Live sync: poll the vault roots and reindex automatically on change,
+    # so edits made directly in Obsidian show up without a manual reload.
+    if VAULT_ROOTS:
+        from src.vault_watcher import start_vault_watcher
+        start_vault_watcher(VAULT_ROOTS, personal_docs_manager.refresh_index)
     api_key_manager = APIKeyManager(DATA_DIR)
     preset_manager = PresetManager(DATA_DIR)
 

@@ -7,7 +7,7 @@ import uuid
 from typing import Any, Dict, List, Tuple
 from fastapi import APIRouter, HTTPException, Query, Request, UploadFile, File, Depends
 from src.request_models import DirectoryRequest
-from core.constants import BASE_DIR, PERSONAL_DIR, PERSONAL_UPLOADS_DIR
+from core.constants import BASE_DIR, PERSONAL_DIR, PERSONAL_UPLOADS_DIR, VAULT_ROOTS
 from src.rag_singleton import get_rag_manager
 from src.auth_helpers import require_privilege, require_user
 from core.middleware import require_admin
@@ -145,23 +145,33 @@ def setup_personal_routes(personal_docs_manager, rag_manager, rag_available):
         """Get the current RAG manager, retrying init if needed."""
         return get_rag_manager()
 
+    # realpath'd once at router setup — same rationale as PERSONAL_DIR below
+    # (resolve symlinks before the commonpath check, not after).
+    _vault_roots_abs = [os.path.realpath(p) for p in VAULT_ROOTS]
+
     def _resolve_allowed_personal_dir(directory: str) -> str:
-        """Resolve a user-supplied personal-docs path under the allowed root."""
+        """Resolve a user-supplied path under PERSONAL_DIR or a configured vault root."""
         if not directory:
             raise HTTPException(400, "Directory path is required")
 
-        # realpath (not abspath) so a symlink inside PERSONAL_DIR that points
+        # realpath (not abspath) so a symlink inside an allowed root that points
         # outside it is resolved before the commonpath confinement check below;
         # abspath only normalises `..` and would let such a symlink escape.
         base_abs = os.path.realpath(PERSONAL_DIR)
         candidate = directory if os.path.isabs(directory) else os.path.join(base_abs, directory)
         resolved = os.path.realpath(candidate)
-        try:
-            in_base = os.path.commonpath([resolved, base_abs]) == base_abs
-        except ValueError:
-            in_base = False
-        if not in_base:
-            raise HTTPException(403, "Directory must be inside personal documents")
+
+        allowed_roots = [base_abs, *_vault_roots_abs]
+        in_allowed_root = False
+        for root in allowed_roots:
+            try:
+                if os.path.commonpath([resolved, root]) == root:
+                    in_allowed_root = True
+                    break
+            except ValueError:
+                continue
+        if not in_allowed_root:
+            raise HTTPException(403, "Directory must be inside personal documents or a configured vault root")
         return resolved
     
     @router.get("")

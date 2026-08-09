@@ -19,6 +19,27 @@ SESSIONS_FILE = os.path.join(DATA_DIR, "sessions.json")
 MEMORY_FILE = os.path.join(DATA_DIR, "memory.json")
 PERSONAL_DIR = os.path.join(DATA_DIR, "personal_docs")
 RUNBOOK_DIR = os.path.join(PERSONAL_DIR, "runbook")
+
+# Chiron addition: extra read-only ingestion roots outside PERSONAL_DIR (the
+# Obsidian vaults), colon-separated. Never includes personal/personal-private
+# per the vault's own CLAUDE.md AI-access rules — that vault is excluded from
+# the default, and anyone overriding CHIRON_VAULT_ROOTS is responsible for
+# respecting that boundary themselves.
+_DEFAULT_VAULT_ROOTS = [
+    os.path.expanduser("~/Documents/Obsidian/learning"),
+    os.path.expanduser("~/Documents/Obsidian/ai-improvement"),
+    os.path.expanduser("~/Documents/Obsidian/finance"),
+    os.path.expanduser("~/Documents/Obsidian/pytheas"),
+    os.path.expanduser("~/Documents/Obsidian/agonizing-sentience"),
+    os.path.expanduser("~/Documents/Obsidian/card-flip"),
+    os.path.expanduser("~/Documents/Obsidian/minecraft-event"),
+]
+_vault_roots_env = os.getenv("CHIRON_VAULT_ROOTS")
+VAULT_ROOTS = (
+    [p for p in _vault_roots_env.split(":") if p]
+    if _vault_roots_env is not None
+    else [p for p in _DEFAULT_VAULT_ROOTS if os.path.isdir(p)]
+)
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 FEATURES_FILE = os.path.join(DATA_DIR, "features.json")
 SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")

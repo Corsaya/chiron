@@ -711,6 +711,10 @@ app.include_router(setup_cleanup_routes(session_manager))
 from routes.personal_routes import setup_personal_routes
 app.include_router(setup_personal_routes(personal_docs_mgr, rag_manager, rag_available))
 
+# Chiron addition: Classroom view over the pytheas vault's Courses/ folder
+from routes.classroom_routes import setup_classroom_routes
+app.include_router(setup_classroom_routes())
+
 # Embedding model management
 from routes.embedding_routes import setup_embedding_routes
 app.include_router(setup_embedding_routes())
