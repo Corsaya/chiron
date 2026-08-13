@@ -93,9 +93,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if is_report or is_classroom_app:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline'; "
+                # sat-test's Math modules embed the real Desmos graphing
+                # calculator (script-loaded from Desmos's CDN) for Bluebook
+                # parity — see static/classroom-apps/sat-test/sat-test.js.
+                # Desmos's own calculator.js requires 'unsafe-eval' internally,
+                # spins up blob: web workers, ships fonts as embedded data:
+                # URIs, and loads a data: URI video (confirmed via CSP
+                # violations in testing, not our code) — each directive below
+                # exists to accommodate one specific violation seen live.
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.desmos.com; "
+                "worker-src 'self' blob:; "
+                "media-src 'self' data:; "
                 "style-src 'self' 'unsafe-inline'; "
-                "font-src 'self'; "
+                "font-src 'self' data:; "
                 "img-src 'self' data: blob: https:; "
                 "connect-src 'self'; "
                 "frame-ancestors 'none'"

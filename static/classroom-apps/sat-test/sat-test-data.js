@@ -3,6 +3,23 @@
    Keep both in sync if questions change. */
 window.SAT_TEST = {
   title: "SAT Diagnostic Test — 2026-08-07",
+  refSheet: [
+    { label: "Circle", formula: "A = \\pi r^2" },
+    { label: "Circle", formula: "C = 2\\pi r" },
+    { label: "Rectangle", formula: "A = lw" },
+    { label: "Triangle", formula: "A = \\frac{1}{2}bh" },
+    { label: "Right triangle", formula: "a^2 + b^2 = c^2" },
+    { label: "45-45-90 triangle", formula: "legs = x, x — hyp = x\\sqrt{2}" },
+    { label: "30-60-90 triangle", formula: "sides = x, x\\sqrt{3}, 2x" },
+    { label: "Rectangular box (volume)", formula: "V = lwh" },
+    { label: "Cylinder (volume)", formula: "V = \\pi r^2 h" },
+    { label: "Sphere (volume)", formula: "V = \\frac{4}{3}\\pi r^3" },
+    { label: "Cone (volume)", formula: "V = \\frac{1}{3}\\pi r^2 h" },
+    { label: "Pyramid (volume)", formula: "V = \\frac{1}{3}lwh" },
+    { label: "Angles in a triangle", formula: "sum = 180°" },
+    { label: "Angles in a quadrilateral", formula: "sum = 360°" },
+    { label: "Full circle", formula: "360° = 2\\pi radians" },
+  ],
   modules: [
     {
       id: "math", label: "Math", calculator: true,

@@ -54,11 +54,28 @@
     border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: none; z-index: 10;
     box-shadow: 0 8px 24px rgba(0,0,0,.4); }
   #sat-calc.open { display: block; }
-  .sat-calc-head { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; }
+  #sat-calc.desmos { width: 420px; height: 460px; padding: 0; overflow: hidden; }
+  .sat-calc-head { display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; font-weight: 600; }
+  #sat-calc.desmos .sat-calc-head { padding: 8px 10px 0; margin-bottom: 4px; }
   #sat-calc-input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);
     background: var(--panel2); color: var(--text); }
   .sat-calc-out { min-height: 1.4em; padding: 6px 2px; font-variant-numeric: tabular-nums; font-size: 1.2em; }
   .sat-calc-row { display: flex; gap: 6px; }
+  #sat-desmos-el { width: 100%; height: 410px; }
+
+  #sat-refsheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 15;
+    display: none; align-items: center; justify-content: center; }
+  #sat-refsheet.open { display: flex; }
+  .sat-refsheet-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; max-width: 640px; width: 92%; max-height: 82vh; overflow-y: auto; }
+  .sat-refsheet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-top: 12px; }
+  .sat-refsheet-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    background: var(--panel2); }
+  .sat-refsheet-item .label { color: var(--muted); font-size: 0.82em; margin-bottom: 4px; }
+  .sat-refsheet-item .formula { font-size: 1.05em; }
+  .sat-refsheet-note { color: var(--muted); font-size: 0.85em; margin-top: 14px; }
 
   .sat-nav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 20;
     display: flex; align-items: center; justify-content: center; }
