@@ -21,19 +21,22 @@ PERSONAL_DIR = os.path.join(DATA_DIR, "personal_docs")
 RUNBOOK_DIR = os.path.join(PERSONAL_DIR, "runbook")
 
 # Chiron addition: extra read-only ingestion roots outside PERSONAL_DIR (the
-# Obsidian vaults), colon-separated. Never includes personal/personal-private
-# per the vault's own CLAUDE.md AI-access rules — that vault is excluded from
-# the default, and anyone overriding CHIRON_VAULT_ROOTS is responsible for
-# respecting that boundary themselves.
+# Obsidian vaults), colon-separated. Per Donovan (2026-08-12, workstream 20
+# execution), there's no more standing walled-off vault — everything here is
+# ingestible by default; individual docs/folders are excluded only when
+# explicitly marked "locked" (convention TBD, not yet enforced by this list).
 _DEFAULT_VAULT_ROOTS = [
     os.path.expanduser("~/Documents/Obsidian/learning"),
     # ai-improvement merged into learning/ai-improvement 2026-08-09
     # (workstream 20/21) — already covered by the learning root above.
     os.path.expanduser("~/Documents/Obsidian/finance"),
+    # finance/card-flip now also holds the former card-flip ops vault,
+    # merged 2026-08-12 — no separate card-flip root needed.
     os.path.expanduser("~/Documents/Obsidian/pytheas"),
     os.path.expanduser("~/Documents/Obsidian/agonizing-sentience"),
-    os.path.expanduser("~/Documents/Obsidian/card-flip"),
-    os.path.expanduser("~/Documents/Obsidian/minecraft-event"),
+    # life/ replaces the old personal(-private) and minecraft-event vaults,
+    # merged 2026-08-12 (workstream 20 execution).
+    os.path.expanduser("~/Documents/Obsidian/life"),
 ]
 _vault_roots_env = os.getenv("CHIRON_VAULT_ROOTS")
 VAULT_ROOTS = (
