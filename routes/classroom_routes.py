@@ -29,6 +29,7 @@ _SKIP_DIRS = {".obsidian", ".git", ".trash", "_artifacts"}
 # Extend this table as more interactive tools get built.
 CUSTOM_APPS = {
     "sat diagnostic test": "/static/classroom-apps/sat-test/sat-test.html",
+    "sat full-length practice test 1": "/static/classroom-apps/sat-practice-test-1/sat-practice-test-1.html",
 }
 
 

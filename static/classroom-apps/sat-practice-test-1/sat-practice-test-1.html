@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAT Full-Length Practice Test 1 — Pytheas</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e2230; --text: #e8eaf0;
+    --muted: #8b93a7; --accent: #4f8cff; --ok: #38b26a; --bad: #e2555a;
+    --border: #2a2f3d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #sat-app { max-width: 880px; margin: 0 auto; padding: 16px; padding-bottom: 90px; }
+  .sat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; margin-top: 16px; }
+  .sat-center { text-align: center; }
+  .sat-center h1, .sat-center h2 { margin-top: 0; }
+  .sat-back { display: inline-block; color: var(--muted); text-decoration: none; margin-bottom: 8px; }
+  .sat-back:hover { color: var(--accent); }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.85em; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 0.95em; margin: 4px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  .sat-topbar { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between;
+    align-items: center; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; margin-top: 12px; }
+  #sat-timer { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1em; }
+  .sat-domain { margin-bottom: 8px; }
+  .sat-stem { font-size: 1.08em; line-height: 1.6; margin-bottom: 18px; }
+  .sat-choices { display: flex; flex-direction: column; gap: 8px; }
+  .sat-choice { display: flex; align-items: stretch; gap: 6px; }
+  .sat-choice-main { flex: 1; display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 10px 14px; }
+  .sat-choice.sel .sat-choice-main { border-color: var(--accent); background: #1c2a4a; }
+  .sat-choice .letter { font-weight: 700; color: var(--accent); width: 1.4em; }
+  .sat-choice.struck .txt { text-decoration: line-through; opacity: 0.5; }
+  .sat-elim { width: 40px; }
+  .sat-spr { width: 240px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); font-size: 1em; }
+
+  .sat-bottombar { position: sticky; bottom: 0; display: flex; justify-content: space-between;
+    align-items: center; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; margin-top: 12px; }
+  .sat-mark { display: flex; align-items: center; gap: 6px; }
+
+  #sat-calc { position: fixed; right: 20px; bottom: 90px; width: 260px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: none; z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  #sat-calc.open { display: block; }
+  #sat-calc.desmos { width: 420px; height: 460px; padding: 0; overflow: hidden; }
+  .sat-calc-head { display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; font-weight: 600; }
+  #sat-calc.desmos .sat-calc-head { padding: 8px 10px 0; margin-bottom: 4px; }
+  #sat-calc-input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); }
+  .sat-calc-out { min-height: 1.4em; padding: 6px 2px; font-variant-numeric: tabular-nums; font-size: 1.2em; }
+  .sat-calc-row { display: flex; gap: 6px; }
+  #sat-desmos-el { width: 100%; height: 410px; }
+
+  #sat-refsheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 15;
+    display: none; align-items: center; justify-content: center; }
+  #sat-refsheet.open { display: flex; }
+  .sat-refsheet-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; max-width: 640px; width: 92%; max-height: 82vh; overflow-y: auto; }
+  .sat-refsheet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-top: 12px; }
+  .sat-refsheet-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    background: var(--panel2); }
+  .sat-refsheet-item .label { color: var(--muted); font-size: 0.82em; margin-bottom: 4px; }
+  .sat-refsheet-item .formula { font-size: 1.05em; }
+  .sat-refsheet-note { color: var(--muted); font-size: 0.85em; margin-top: 14px; }
+
+  .sat-nav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 20;
+    display: flex; align-items: center; justify-content: center; }
+  .sat-nav-grid { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; max-width: 460px; width: 90%; }
+  .sat-nav-grid .grid, .sat-card .grid { display: grid; grid-template-columns: repeat(8, 1fr);
+    gap: 8px; margin: 12px 0; }
+  .sat-navbtn { padding: 8px 0; border-radius: 6px; }
+  .sat-navbtn.answered { border-color: var(--ok); }
+  .sat-navbtn.marked { border-color: #e0a339; }
+  .sat-navbtn.cur { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .sat-table { width: 100%; border-collapse: collapse; margin-top: 12px; text-align: left; }
+  .sat-table th, .sat-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+
+  .sat-review-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sat-review-item { border-top: 1px solid var(--border); padding: 16px 0; }
+  .sat-review-item:first-child { border-top: none; }
+  .sat-review-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .badge { font-size: 0.8em; padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border); }
+  .badge.ok { color: var(--ok); border-color: var(--ok); }
+  .badge.bad { color: var(--bad); border-color: var(--bad); }
+  .badge.tool { color: var(--accent); border-color: var(--accent); }
+  .sat-explain { margin-top: 6px; line-height: 1.5; }
+
+  .frac { display: inline-flex; flex-direction: column; vertical-align: middle;
+    text-align: center; font-size: 0.9em; line-height: 1.1; margin: 0 2px; }
+  .frac .num { border-bottom: 1px solid var(--text); padding: 0 3px; }
+  .frac .den { padding: 0 3px; }
+  sup { font-size: 0.75em; }
+</style>
+</head>
+<body>
+<div id="sat-app"><div class="sat-card sat-center muted">Loading…</div></div>
+<script src="/static/classroom-apps/sat-practice-test-1/sat-practice-test-1-data.js"></script>
+<script src="/static/classroom-apps/sat-test/sat-test.js"></script>
+</body>
+</html>
