@@ -715,6 +715,9 @@ app.include_router(setup_personal_routes(personal_docs_mgr, rag_manager, rag_ava
 from routes.classroom_routes import setup_classroom_routes
 app.include_router(setup_classroom_routes())
 
+from routes.classroom_tutor_routes import setup_classroom_tutor_routes
+app.include_router(setup_classroom_tutor_routes())
+
 # Embedding model management
 from routes.embedding_routes import setup_embedding_routes
 app.include_router(setup_embedding_routes())
