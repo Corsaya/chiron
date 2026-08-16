@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vault Sync — Chiron</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --border: #2a2e38; --text: #e6e8ee;
+    --muted: #8b909c; --accent: #5b8cff; --ok: #37c26b; --warn: #e0a83c; --bad: #e05c5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0; padding: 24px; max-width: 900px; margin-inline: auto;
+  }
+  a.back { color: var(--muted); text-decoration: none; font-size: 14px; }
+  a.back:hover { color: var(--text); }
+  h1 { font-size: 20px; margin: 16px 0 4px; }
+  p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .vault-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .vault-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .vault-name { font-weight: 600; font-size: 15px; }
+  .badge {
+    display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+  .badge.clean { color: var(--ok); border-color: var(--ok); }
+  .badge.dirty { color: var(--warn); border-color: var(--warn); }
+  .badge.behind { color: var(--bad); border-color: var(--bad); }
+  .meta { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  textarea {
+    flex: 1; background: #0b0d11; color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; resize: vertical; min-height: 36px;
+  }
+  button {
+    background: var(--accent); color: white; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .status-line { font-size: 12.5px; margin-top: 8px; min-height: 16px; }
+  .status-line.ok { color: var(--ok); }
+  .status-line.err { color: var(--bad); }
+  #build-info { color: var(--muted); font-size: 12px; margin-top: 30px; border-top: 1px solid var(--border); padding-top: 12px; }
+</style>
+</head>
+<body>
+  <a class="back" href="/">&larr; Back to Chiron</a>
+  <h1>Vault Sync</h1>
+  <p class="sub">Git status and commit/push for every configured Obsidian vault root. Not real-time — hit Refresh after editing files elsewhere.</p>
+  <button class="secondary" id="refresh-btn" onclick="loadStatus()">Refresh</button>
+  <div id="vaults"></div>
+  <div id="build-info">Loading build info&hellip;</div>
+
+<script>
+async function loadStatus() {
+  const container = document.getElementById("vaults");
+  container.innerHTML = '<p style="color:var(--muted)">Loading&hellip;</p>';
+  let data;
+  try {
+    const res = await fetch("/api/vault-git/status");
+    data = await res.json();
+  } catch (e) {
+    container.innerHTML = '<p style="color:var(--bad)">Failed to load: ' + e + '</p>';
+    return;
+  }
+  container.innerHTML = "";
+  (data.vaults || []).forEach(renderVault);
+}
+
+function renderVault(v) {
+  const card = document.createElement("div");
+  card.className = "vault-card";
+  if (!v.is_repo) {
+    card.innerHTML = `<div class="vault-head"><span class="vault-name">${v.name}</span>
+      <span class="badge">not a git repo</span></div>
+      <div class="meta">${v.path}</div>`;
+    document.getElementById("vaults").appendChild(card);
+    return;
+  }
+  const statusBadge = v.dirty
+    ? `<span class="badge dirty">${v.dirty_count} uncommitted change${v.dirty_count === 1 ? "" : "s"}</span>`
+    : `<span class="badge clean">clean</span>`;
+  const aheadBehind = v.has_upstream
+    ? (v.ahead || v.behind
+        ? `<span class="badge ${v.behind ? "behind" : ""}">${v.ahead ? v.ahead + " ahead" : ""}${v.ahead && v.behind ? ", " : ""}${v.behind ? v.behind + " behind" : ""}</span>`
+        : `<span class="badge clean">up to date</span>`)
+    : `<span class="badge">no upstream</span>`;
+  card.innerHTML = `
+    <div class="vault-head">
+      <span class="vault-name">${v.name} <span style="color:var(--muted);font-weight:400">(${v.branch || "?"})</span></span>
+      <span>${statusBadge} ${aheadBehind}</span>
+    </div>
+    <div class="meta">${v.last_commit_message ? v.last_commit_hash + " &middot; " + v.last_commit_message : "no commits"}</div>
+    <div class="row">
+      <textarea placeholder="Commit message&hellip;" ${v.dirty ? "" : "disabled"} id="msg-${v.name}"></textarea>
+      <button ${v.dirty ? "" : "disabled"} onclick="doCommit('${v.name}')">Commit</button>
+      <button class="secondary" ${v.has_upstream && v.ahead > 0 ? "" : (v.has_upstream ? "" : "disabled")} onclick="doPush('${v.name}')">Push</button>
+    </div>
+    <div class="status-line" id="status-${v.name}"></div>
+  `;
+  document.getElementById("vaults").appendChild(card);
+}
+
+async function doCommit(name) {
+  const msg = document.getElementById("msg-" + name).value.trim();
+  const statusEl = document.getElementById("status-" + name);
+  if (!msg) { statusEl.textContent = "Enter a commit message first."; statusEl.className = "status-line err"; return; }
+  statusEl.textContent = "Committing…"; statusEl.className = "status-line";
+  const res = await fetch(`/api/vault-git/${name}/commit`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: msg }),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    statusEl.textContent = "Committed."; statusEl.className = "status-line ok";
+    loadStatus();
+  } else {
+    statusEl.textContent = data.error || "Commit failed."; statusEl.className = "status-line err";
+  }
+}
+
+async function doPush(name) {
+  const statusEl = document.getElementById("status-" + name);
+  statusEl.textContent = "Pushing…"; statusEl.className = "status-line";
+  const res = await fetch(`/api/vault-git/${name}/push`, { method: "POST" });
+  const data = await res.json();
+  if (data.ok) {
+    statusEl.textContent = "Pushed."; statusEl.className = "status-line ok";
+    loadStatus();
+  } else {
+    statusEl.textContent = data.error || "Push failed."; statusEl.className = "status-line err";
+  }
+}
+
+async function loadBuildInfo() {
+  const el = document.getElementById("build-info");
+  try {
+    const res = await fetch("/api/build-info");
+    const b = await res.json();
+    el.textContent = b.commit === "unknown"
+      ? `Chiron v${b.app_version} — build info unavailable (${b.note || "no BUILD_INFO.json"})`
+      : `Chiron v${b.app_version} — ${b.short_commit} (${b.branch}) — commit ${b.commit_subject} — built ${b.built_at}`;
+  } catch (e) {
+    el.textContent = "Build info unavailable.";
+  }
+}
+
+loadStatus();
+loadBuildInfo();
+</script>
+</body>
+</html>
