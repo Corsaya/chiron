@@ -74,8 +74,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Visual report pages are self-contained HTML — need inline scripts + external images
         is_report = path.startswith("/api/research/report/")
         # Chiron addition: classroom custom apps (routes/classroom_routes.py
-        # CUSTOM_APPS) are ported standalone tools (e.g. sat-test.js) that
-        # use inline onclick/oninput handlers throughout. Same carve-out
+        # CUSTOM_APPS) are ported standalone tools that use inline
+        # onclick/oninput handlers throughout. Same carve-out
         # rationale as is_report: self-contained, not user-content-driven.
         is_classroom_app = path.startswith("/static/classroom-apps/")
 
@@ -93,9 +93,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if is_report or is_classroom_app:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
-                # sat-test's Math modules embed the real Desmos graphing
-                # calculator (script-loaded from Desmos's CDN) for Bluebook
-                # parity — see static/classroom-apps/sat-test/sat-test.js.
+                # Kept for classroom apps that embed the Desmos graphing
+                # calculator (script-loaded from Desmos's CDN). The SAT apps
+                # that originally needed this were removed 2026-08-20; these
+                # directives stay for any future Desmos embed.
                 # Desmos's own calculator.js requires 'unsafe-eval' internally,
                 # spins up blob: web workers, ships fonts as embedded data:
                 # URIs, and loads a data: URI video (confirmed via CSP

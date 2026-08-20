@@ -31,12 +31,6 @@ services:
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/pytheas:/app/vaults/pytheas:ro
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/agonizing-sentience:/app/vaults/agonizing-sentience:ro
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/life:/app/vaults/life:ro
-      # Chiron addition: the ONE writable path into a vault. The SAT drill's
-      # export endpoint (routes/sat_drill_routes.py) writes a pre-test review
-      # doc here. Deliberately scoped to this single folder rather than making
-      # the pytheas mount above read-write, so the app still cannot touch any
-      # other vault content.
-      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/pytheas/Courses/SAT/Review:/app/vaults/pytheas-review:rw
     extra_hosts:
       # Lets the container reach local services on the Docker host, including
       # Ollama at http://host.docker.internal:11434.

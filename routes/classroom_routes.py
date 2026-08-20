@@ -27,11 +27,9 @@ _SKIP_DIRS = {".obsidian", ".git", ".trash", "_artifacts"}
 
 # filename (case-insensitive substring match) -> static app entry point.
 # Extend this table as more interactive tools get built.
-CUSTOM_APPS = {
-    "sat diagnostic test": "/static/classroom-apps/sat-test/sat-test.html",
-    "sat full-length practice test 1": "/static/classroom-apps/sat-practice-test-1/sat-practice-test-1.html",
-    "sat adaptive drill": "/static/classroom-apps/sat-drill/sat-drill.html",
-}
+# Emptied 2026-08-20: the SAT test/drill apps were removed — official Bluebook and the
+# College Board Question Bank are the only SAT question sources now.
+CUSTOM_APPS: dict[str, str] = {}
 
 
 def _custom_app_for(filename: str) -> str | None:

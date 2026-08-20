@@ -3,7 +3,7 @@ sat_study_log.py
 
 Chiron addition: a flat append-only record of every question Donovan asks the
 Classroom tutor, so that at the end of a study session it can be folded into a
-single review document in the vault (see routes/sat_drill_routes.py).
+single review document in the vault.
 
 Deliberately a JSON file rather than a DB table — this is study scratch data
 with a lifetime of days, it needs to survive a container restart but nothing

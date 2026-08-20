@@ -718,9 +718,6 @@ app.include_router(setup_classroom_routes())
 from routes.classroom_tutor_routes import setup_classroom_tutor_routes
 app.include_router(setup_classroom_tutor_routes())
 
-from routes.sat_drill_routes import setup_sat_drill_routes
-app.include_router(setup_sat_drill_routes())
-
 # Embedding model management
 from routes.embedding_routes import setup_embedding_routes
 app.include_router(setup_embedding_routes())
