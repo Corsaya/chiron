@@ -20,8 +20,28 @@ from pydantic import BaseModel
 
 from src.auth_helpers import require_user
 from src.llm_core import stream_llm
+from src.sat_study_log import record_question
 
 logger = logging.getLogger(__name__)
+
+
+def _collect_delta(chunk: str, collected: List[str]) -> None:
+    """Pull the visible text out of one SSE frame. Thinking-tagged deltas are
+    skipped — the review doc wants the tutor's answer, not its reasoning."""
+    for line in chunk.splitlines():
+        if not line.startswith("data: "):
+            continue
+        body = line[6:].strip()
+        if not body or body == "[DONE]":
+            continue
+        try:
+            obj = json.loads(body)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict) and not obj.get("thinking"):
+            delta = obj.get("delta")
+            if isinstance(delta, str):
+                collected.append(delta)
 
 MAX_LESSON_CHARS = 8000
 MAX_HISTORY_TURNS = 8
@@ -107,17 +127,24 @@ def setup_classroom_tutor_routes() -> APIRouter:
         messages.append({"role": "user", "content": req.question})
 
         async def stream_answer() -> AsyncGenerator[str, None]:
+            # Accumulate the visible answer as it streams so the exchange can be
+            # written to the study log once complete — the review doc Donovan
+            # takes into the test is built from these.
+            collected: List[str] = []
             try:
                 async for chunk in stream_llm(
                     endpoint_url, model, messages,
                     headers=headers, temperature=0.5, max_tokens=0, tools=None,
                 ):
+                    _collect_delta(chunk, collected)
                     yield chunk
             except Exception as e:
                 logger.error(f"classroom tutor stream failed: {e}")
                 payload = json.dumps({"delta": f"\n\n[Tutor error: {e}]"})
                 yield f"data: {payload}\n\n"
                 yield "data: [DONE]\n\n"
+            finally:
+                record_question(req.question, "".join(collected), req.lesson_title)
 
         return StreamingResponse(stream_answer(), media_type="text/event-stream")
 
