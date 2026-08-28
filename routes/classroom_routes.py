@@ -1,5 +1,5 @@
 # routes/classroom_routes.py
-"""Chiron addition: Google-Classroom-style view over a vault's Courses/
+"""Chiron addition: Google-Classroom-style view over the configured Courses/
 folder. Folder-convention only (no manual registry, per Donovan's call
 2026-08-09) — a subfolder of COURSES_ROOT is a classroom, files inside it
 are assignments/materials, subfolders are sections.
@@ -18,10 +18,9 @@ from src.auth_helpers import require_user
 
 logger = logging.getLogger(__name__)
 
-# Vault-relative path (matches the `pytheas` mount in docker-compose.yml)
-# under which classrooms live. Hardcoded rather than configurable for now —
-# this is the one place Donovan's Courses/ convention already lives.
-COURSES_ROOT = "/app/vaults/pytheas/Courses"
+# Defaults to the Learning vault after the 2026-08-27 ownership cleanup. Keep
+# this configurable so a future vault move does not require a source edit.
+COURSES_ROOT = os.getenv("CHIRON_COURSES_ROOT", "/app/vaults/learning/Courses")
 
 _SKIP_DIRS = {".obsidian", ".git", ".trash", "_artifacts"}
 

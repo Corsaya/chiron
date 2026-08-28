@@ -45,6 +45,7 @@ services:
       - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
       - SEARXNG_INSTANCE=http://searxng:8080
       - CHIRON_VAULT_ROOTS=/app/vaults/learning:/app/vaults/finance:/app/vaults/pytheas:/app/vaults/agonizing-sentience:/app/vaults/life
+      - CHIRON_COURSES_ROOT=${CHIRON_COURSES_ROOT:-/app/vaults/learning/Courses}
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
