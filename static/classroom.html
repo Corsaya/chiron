@@ -104,6 +104,15 @@
     padding: 0 14px; font-size: 13px; cursor: pointer;
   }
   .tutor-input-row button:disabled { opacity: 0.5; cursor: default; }
+  .lesson-body { overflow-wrap: anywhere; }
+  .lesson-body details { margin-bottom: 14px; }
+  .lesson-body summary { cursor: pointer; }
+  #sat-source-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  @media (max-width: 640px) {
+    .layout { flex-direction: column; overflow-y: auto; }
+    nav.side { width: 100%; flex: 0 0 auto; max-height: 180px; }
+    main.content { flex: 1 0 auto; overflow: visible; }
+  }
 </style>
 </head>
 <body>

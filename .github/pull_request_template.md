@@ -2,6 +2,16 @@
 
 <!-- One paragraph: what changed and why. "Fixed bug" and "Added feature" are not summaries. -->
 
+## Chiron principles
+
+Read [The Chiron Principles](../docs/PHILOSOPHY.md) before evaluating implementation.
+
+- Which principle does this support?
+- Does it weaken any principle?
+- If yes, why?
+
+<!-- Cite principle numbers and explain the concrete effect. Philosophy changes are exceptional: identify the affected promise and justify the change explicitly. -->
+
 ## Target branch
 
 - [ ] This PR targets **`dev`**, not `main`. All PRs land in `dev`; `main` is curated by the maintainer at each release. If your PR is on `main` by accident, click "Edit" on this PR and change the base.

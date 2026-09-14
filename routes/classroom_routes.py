@@ -12,9 +12,11 @@ actual Bluebook-style runner, not its source markdown.
 import logging
 import os
 from typing import Any, Dict, List
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from src.auth_helpers import require_user
+from src.sat_course import CourseSourceError, course_plan, read_source
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +72,19 @@ def _list_materials(dir_path: str, rel_prefix: str = "") -> List[Dict[str, Any]]
 def setup_classroom_routes() -> APIRouter:
     router = APIRouter(prefix="/api/classrooms")
 
+    @router.get("/SAT/plan")
+    def get_sat_plan(response: Response, owner: str = Depends(require_user)):
+        response.headers["Cache-Control"] = "no-store"
+        root = Path(COURSES_ROOT)
+        if (root / "SAT").is_symlink():
+            raise HTTPException(403, "Linked SAT course roots are not allowed")
+        try:
+            return course_plan(root / "SAT")
+        except CourseSourceError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        except OSError as exc:
+            raise HTTPException(503, "SAT source could not be read") from exc
+
     @router.get("")
     def list_classrooms(owner: str = Depends(require_user)):
         if not os.path.isdir(COURSES_ROOT):
@@ -96,6 +111,17 @@ def setup_classroom_routes() -> APIRouter:
 
     @router.get("/{classroom_name}/note")
     def get_note(classroom_name: str, path: str, owner: str = Depends(require_user)):
+        if classroom_name == "SAT":
+            # Use the same source restrictions as the plan inspector.
+            root = Path(COURSES_ROOT) / "SAT"
+            if root.is_symlink():
+                raise HTTPException(403, "Linked SAT course roots are not allowed")
+            try:
+                return read_source(root, path)
+            except CourseSourceError as exc:
+                raise HTTPException(422, str(exc)) from exc
+            except OSError as exc:
+                raise HTTPException(503, "SAT source could not be read") from exc
         classroom_dir = os.path.realpath(os.path.join(COURSES_ROOT, classroom_name))
         courses_root_abs = os.path.realpath(COURSES_ROOT)
         if os.path.commonpath([classroom_dir, courses_root_abs]) != courses_root_abs:

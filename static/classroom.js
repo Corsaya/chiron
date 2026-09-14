@@ -15,7 +15,7 @@ async function api(path, opts) {
   return res.json();
 }
 
-function esc(s) { return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // ---------------------------------------------------------------- progress --
 const PROGRESS_KEY = 'chiron_classroom_progress_v1';
@@ -23,7 +23,7 @@ function loadProgress() {
   try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'); } catch (e) { return {}; }
 }
 function saveProgress(p) { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); }
-function isDone(classroomName, path) { return !!(loadProgress()[classroomName] || {})[path]; }
+function isDone(classroomName, path) { if (classroomName === 'SAT') return false; return !!(loadProgress()[classroomName] || {})[path]; }
 function setDone(classroomName, path, done) {
   const p = loadProgress();
   p[classroomName] = p[classroomName] || {};
@@ -63,7 +63,7 @@ async function renderSidebar() {
     let materialsHtml = '';
     let prog = null;
     if (open && state.materials.length) {
-      prog = classroomProgress(c.name, state.materials);
+      if (c.name !== 'SAT') prog = classroomProgress(c.name, state.materials);
       materialsHtml = renderSideMaterials(state.materials, c.name);
     }
     parts.push(`
@@ -124,8 +124,8 @@ async function showClassrooms() {
       const prog = classroomProgress(c.name, c.materials);
       return `<div class="card" data-classroom="${esc(c.name)}">
         <div class="name">${esc(c.name)}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${prog.pct}%"></div></div>
-        <div class="pct">${prog.total ? `${prog.done}/${prog.total} complete` : 'No materials yet'}</div>
+        ${c.name === 'SAT' ? '<div class="pct">Course plan and source evidence</div>' : `<div class="bar-track"><div class="bar-fill" style="width:${prog.pct}%"></div></div>
+        <div class="pct">${prog.total ? `${prog.done}/${prog.total} complete` : 'No materials yet'}</div>`}
       </div>`;
     }).join('')}</div>`;
     mainEl.querySelectorAll('[data-classroom]').forEach(el => {
@@ -156,12 +156,61 @@ async function showClassroom(name) {
     const prog = classroomProgress(name, data.materials);
     mainEl.innerHTML = `
       <div class="lesson-head"><h2 class="lesson-title" style="font-size:19px">${esc(name)}</h2>
-        <span class="progress-pill ${prog.pct === 100 ? 'done' : ''}">${prog.done}/${prog.total} complete</span></div>
+        ${name === 'SAT' ? '<span class="progress-pill">Source-linked plan</span>' : `<span class="progress-pill ${prog.pct === 100 ? 'done' : ''}">${prog.done}/${prog.total} complete</span>`}</div>
       ${data.materials.length ? '' : '<div class="empty">Empty classroom.</div>'}
     `;
     renderSidebar();
+    if (name === 'SAT') await renderSatPlan();
   } catch (e) {
     mainEl.innerHTML = `<div class="empty">Failed to load classroom: ${esc(e.message)}</div>`;
+  }
+}
+
+// Read-only interpretation of the existing course Home, within its current route.
+async function renderSatPlan() {
+  const panel = document.createElement('section');
+  panel.className = 'lesson-body';
+  panel.setAttribute('aria-label', 'SAT course plan');
+  mainEl.appendChild(panel);
+  panel.innerHTML = '<p role="status">Reading the course plan…</p>';
+  try {
+    const plan = await api('/api/classrooms/SAT/plan');
+    if (!panel.isConnected || state.current !== 'SAT' || state.activePath) return;
+    // Wiki targets are explicit source buttons below, not guessed browser URLs.
+    const render = text => sanitizeAllowedHtml(mdToHtml((text || '').replace(
+      /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+      (_, target, label) => label || target.split('/').pop()
+    )));
+    panel.innerHTML = `
+      <h2>Next action</h2>
+      <p class="pct">From your recorded course plan</p>
+      ${plan.action ? render(plan.action) : '<p>No next action is recorded in the course Home.</p>'}
+      <details><summary>Why this?</summary>
+        ${plan.evidence ? render(plan.evidence) : '<p>No supporting evidence section is recorded. This is an authored plan, not a personalized inference.</p>'}
+        <p>${esc(plan.limitations)}</p>
+        <p>Source: ${esc(plan.source.path)}<br>Modified: ${esc(plan.source.modified_at)}<br>
+        <span title="${esc(plan.source.revision)}">Revision: ${esc(plan.source.revision.slice(0, 12))}</span></p>
+      </details>
+      <h3>Continue in the existing course</h3>
+      <div id="sat-source-links"></div>`;
+    const links = panel.querySelector('#sat-source-links');
+    for (const source of [{ path: plan.source.path, title: 'Open course Home' }, ...plan.references]) {
+      const button = document.createElement('button');
+      button.className = 'mark-done-btn';
+      button.textContent = source.title;
+      button.addEventListener('click', () => openNote('SAT', source.path, source.title));
+      links.appendChild(button);
+      links.appendChild(document.createTextNode(' '));
+    }
+  } catch (error) {
+    if (!panel.isConnected) return;
+    panel.innerHTML = `<p role="alert">The course plan could not be read: ${esc(error.message)}</p>
+      <p>Your existing course notes remain in the navigation.</p>`;
+    const retry = document.createElement('button');
+    retry.className = 'mark-done-btn';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => { panel.remove(); renderSatPlan(); });
+    panel.appendChild(retry);
   }
 }
 
@@ -187,11 +236,12 @@ async function openNote(classroomName, path, title) {
     mainEl.innerHTML = `
       <div class="lesson-head">
         <h1 class="lesson-title">${esc(title)}</h1>
-        <button class="mark-done-btn ${done ? 'done' : ''}" id="mark-done">${done ? '✓ Completed' : 'Mark complete'}</button>
+        ${classroomName === 'SAT' ? '<button class="mark-done-btn" id="sat-back">Back to SAT plan</button>' : `<button class="mark-done-btn ${done ? 'done' : ''}" id="mark-done">${done ? '✓ Completed' : 'Mark complete'}</button>`}
       </div>
       <div class="lesson-body">${html}</div>
     `;
-    document.getElementById('mark-done').addEventListener('click', (e) => {
+    document.getElementById('sat-back')?.addEventListener('click', () => showClassroom('SAT'));
+    document.getElementById('mark-done')?.addEventListener('click', (e) => {
       const nowDone = !isDone(classroomName, path);
       setDone(classroomName, path, nowDone);
       e.target.textContent = nowDone ? '✓ Completed' : 'Mark complete';
