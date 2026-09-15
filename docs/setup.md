@@ -34,6 +34,18 @@ only when you intentionally want LAN/reverse-proxy access.
 
 ### Chiron Bash shortcut
 
+For fish, do not source `.bashrc`. Save this in
+`~/.config/fish/functions/chiron.fish`; fish loads the command automatically:
+
+```fish
+function chiron --description 'Start Chiron or manage its Compose stack'
+    bash /home/donovan/code/chiron/chiron/scripts/chiron.sh $argv
+end
+```
+
+Then run `chiron`, `chiron logs`, `chiron stop`, or `chiron status`.
+The following alias instructions apply only to Bash.
+
 For the existing nested checkout, add this to `~/.bashrc`:
 
 ```bash
