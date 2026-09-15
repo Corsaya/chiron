@@ -26,11 +26,11 @@ services:
       # mount below, no separate mount needed.
       # card-flip/ merged into finance/card-flip and minecraft-event/ merged
       # into life/minecraft-event on 2026-08-12 — old roots dropped below.
-      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/learning:/app/vaults/learning:ro
-      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/finance:/app/vaults/finance:ro
-      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/pytheas:/app/vaults/pytheas:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/learning-vault:/app/vaults/learning:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/finance-vault:/app/vaults/finance:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/pytheas-vault:/app/vaults/pytheas:ro
       - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/agonizing-sentience:/app/vaults/agonizing-sentience:ro
-      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/life:/app/vaults/life:ro
+      - ${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}/life-vault:/app/vaults/life:ro
     extra_hosts:
       # Lets the container reach local services on the Docker host, including
       # Ollama at http://host.docker.internal:11434.

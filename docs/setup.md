@@ -27,10 +27,30 @@ docker compose up -d --build
 ```
 To include optional extras in the image (PDF viewer, Office extraction; includes AGPL PyMuPDF), build with `docker compose build --build-arg INSTALL_OPTIONAL=true` before `up`.
 
-Open `http://localhost:7000` when the containers are healthy. Docker Compose
+Open `http://localhost:7001` when the containers are healthy. This checkout's base Docker Compose
 binds the web UI to `127.0.0.1` by default. If the port is taken, set
-`APP_PORT=7001` in `.env` and recreate the container. Set `APP_BIND=0.0.0.0`
+`APP_PORT` to an available port in `.env` and recreate the container. Set `APP_BIND=0.0.0.0`
 only when you intentionally want LAN/reverse-proxy access.
+
+### Chiron Bash shortcut
+
+For the existing nested checkout, add this to `~/.bashrc`:
+
+```bash
+alias chiron='bash /home/donovan/code/chiron/chiron/scripts/chiron.sh'
+```
+
+Reload with `source ~/.bashrc`, then run `chiron`. The launcher builds the
+current checkout and starts Compose in the background. It uses `sudo docker`
+when the current user cannot access Docker directly, so a password prompt may
+appear. Docker and Compose must already be installed and the Docker daemon
+must be running. Use `chiron stop`, `chiron logs`, or `chiron status` afterward.
+
+Open `http://localhost:7001/static/classroom.html#/SAT` for SAT, or
+`http://localhost:7001/` for Chiron, unless `.env` overrides `APP_PORT`.
+The base Compose file mounts the existing `learning-vault`, `finance-vault`,
+`pytheas-vault`, and `life-vault` directories read-only; their container paths
+retain the short logical names. It also mounts `agonizing-sentience` read-only.
 
 > **On Apple Silicon (M-series) Macs:** Docker can't reach the Metal GPU, so
 > Cookbook serves local models on CPU only. For GPU-accelerated model serving,
