@@ -202,6 +202,7 @@ async function renderSatPlan() {
       links.appendChild(button);
       links.appendChild(document.createTextNode(' '));
     }
+    renderSatDesmos(panel);
   } catch (error) {
     if (!panel.isConnected) return;
     panel.innerHTML = `<p role="alert">The course plan could not be read: ${esc(error.message)}</p>
@@ -212,6 +213,44 @@ async function renderSatPlan() {
     retry.addEventListener('click', () => { panel.remove(); renderSatPlan(); });
     panel.appendChild(retry);
   }
+}
+
+// Original examples teach calculator mechanics; no answer is inferred from a PDF.
+const SAT_DESMOS = [
+  ['Equation and intersection', 'Algebra', '3x+7=22', ['Identify the requested variable and any restrictions.', 'Enter y=3x+7 on one line and y=22 on another.', 'Select the intersection; its x-coordinate is 5.', 'Substitute 5 into the original equation. Report x, not the y-coordinate.']],
+  ['Linear system', 'Algebra', '2x+y=11 and x-y=1', ['Enter both equations on separate lines.', 'Select the intersection (4,3).', 'If the prompt asks for x+y, calculate 7; verify in both equations.']],
+  ['Number of solutions', 'Algebra', '2x+2y=6 and x+y=3', ['Graph both equations; the lines overlap.', 'Compare coefficients algebraically to prove they are the same line.', 'Report infinitely many solutions; an overlap may hide one line.']],
+  ['Quadratic roots', 'Advanced Math', 'x²-5x+6=0', ['Enter y=x^2-5x+6.', 'Select both x-intercepts: 2 and 3.', 'Check whether the question restricts the domain; substitute candidates.']],
+  ['Vertex and extrema', 'Advanced Math', 'y=-2(x-3)²+18', ['Enter y=-2(x-3)^2+18.', 'Select the peak (3,18).', 'For the maximum value report 18; for the input where it occurs report 3. Check domain endpoints.']],
+  ['Function input', 'Advanced Math', 'f(x)=x²-4x+7; f(3)', ['Enter f(x)=x^2-4x+7.', 'On a second line enter f(3); read 4.', 'For f(2x), type parentheses around the full input.']],
+  ['Regression from a table', 'Problem Solving and Data Analysis', '(0,1), (1,4), (2,9)', ['Add a table with x_1 and y_1 columns and enter the three pairs.', 'Type y_1~a*x_1^2+b*x_1+c on a new line.', 'Read a=1, b=2, c=1; check each original pair.', 'This exact fit does not establish a quadratic model for other data.']],
+  ['Statistics from a list', 'Problem Solving and Data Analysis', '2, 4, 4, 6', ['Enter L=[2,4,4,6].', 'Enter mean(L) and median(L); both return 4.', 'Use stdev(L) for sample or stdevp(L) for population only if asked.']],
+  ['Circle equation', 'Geometry and Trigonometry', '(x-2)²+(y+1)²=25', ['Enter (x-2)^2+(y+1)^2=25.', 'Identify center (2,-1) and radius 5; square root the right side.', 'Use the graph to check shape, then rely on the equation for exact values.']],
+  ['Right triangle trig', 'Geometry and Trigonometry', 'opposite=3, adjacent=4', ['Sketch and label the right triangle first.', 'Use tan(theta)=3/4 or the Pythagorean theorem for hypotenuse 5.', 'Enter arctan(3/4) only if the angle is requested; check degree mode.', 'A graph does not supply missing geometry assumptions.']]
+];
+
+function renderSatDesmos(panel) {
+  const section = document.createElement('section');
+  section.setAttribute('aria-label', 'Desmos math coach');
+  section.innerHTML = '<h2>Desmos math coach</h2><p>Choose a domain and a skill. Each lesson shows exactly what to type, what to click, and what to check. For a specific question, choose the closest skill and ask the tutor with the full prompt and choices.</p><label>Domain <select id="sat-domain"></select></label> <label>Skill <select id="sat-skill"></select></label><div id="sat-desmos-lesson" aria-live="polite"></div><p><a href="https://www.desmos.com/calculator" target="_blank" rel="noopener noreferrer">Open Desmos calculator</a> · In Bluebook, practice using its built-in calculator as well.</p>';
+  panel.appendChild(section);
+  const domain = section.querySelector('#sat-domain');
+  const skill = section.querySelector('#sat-skill');
+  const lesson = section.querySelector('#sat-desmos-lesson');
+  for (const name of [...new Set(SAT_DESMOS.map(item => item[1]))]) domain.add(new Option(name, name));
+  function selectSkill() {
+    skill.replaceChildren();
+    SAT_DESMOS.forEach((item, index) => { if (item[1] === domain.value) skill.add(new Option(item[0], index)); });
+    showLesson();
+  }
+  function showLesson() {
+    const item = SAT_DESMOS[Number(skill.value)];
+    if (!item) return;
+    lesson.innerHTML = `<h3>${esc(item[0])}</h3><p>Example: ${esc(item[2])}</p><ol>${item[3].map(step => `<li>${esc(step)}</li>`).join('')}</ol><p>First identify the relationship yourself; then compare hand solving with the graph. Desmos approximations require an exact check when the answer calls for one.</p>`;
+  }
+  domain.addEventListener('change', selectSkill);
+  skill.addEventListener('change', showLesson);
+  selectSkill();
 }
 
 function openApp(url) {
