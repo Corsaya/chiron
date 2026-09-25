@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.responses import FileResponse
 from src.auth_helpers import require_user
 from src.sat_course import CourseSourceError, course_plan, pdf_source_path, read_source
+from src.sat_daily import daily_questions
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,19 @@ def _list_materials(dir_path: str, rel_prefix: str = "", *, sat_pdfs: bool = Fal
 
 def setup_classroom_routes() -> APIRouter:
     router = APIRouter(prefix="/api/classrooms")
+
+    @router.get("/SAT/daily-questions")
+    def get_sat_daily_questions(response: Response, date: str | None = None, owner: str = Depends(require_user)):
+        response.headers["Cache-Control"] = "no-store"
+        root = Path(COURSES_ROOT) / "SAT"
+        if root.is_symlink():
+            raise HTTPException(403, "Linked SAT course roots are not allowed")
+        try:
+            return daily_questions(root, date)
+        except CourseSourceError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        except (OSError, ValueError) as exc:
+            raise HTTPException(503, "SAT questions could not be read") from exc
 
     @router.get("/SAT/plan")
     def get_sat_plan(response: Response, owner: str = Depends(require_user)):

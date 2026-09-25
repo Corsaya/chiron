@@ -183,7 +183,7 @@ async function showClassroom(name) {
       ${data.materials.length ? '' : '<div class="empty">Empty classroom.</div>'}
     `;
     renderSidebar();
-    if (name === 'SAT') await renderSatPlan();
+    if (name === 'SAT') { await renderSatDaily(); await renderSatPlan(); }
   } catch (e) {
     mainEl.innerHTML = `<div class="empty">Failed to load classroom: ${esc(e.message)}</div>`;
     const retry = document.createElement('button');
@@ -192,6 +192,39 @@ async function showClassroom(name) {
     retry.addEventListener('click', () => showClassroom(name));
     mainEl.appendChild(retry);
   }
+}
+
+// The daily list points into the six source PDFs. Attempts remain in the course CSV.
+async function renderSatDaily() {
+  const panel = document.createElement('section');
+  panel.className = 'lesson-body';
+  panel.setAttribute('aria-label', 'SAT daily questions');
+  mainEl.appendChild(panel);
+  const show = async (day, full = false) => {
+    panel.innerHTML = '<p role="status">Choosing questions…</p>';
+    try {
+      const result = await api(`/api/classrooms/SAT/daily-questions${day ? `?date=${encodeURIComponent(day)}` : ''}`);
+      if (!panel.isConnected || state.current !== 'SAT' || state.activePath) return;
+      const count = full ? result.questions.length : result.short_set;
+      const items = result.questions.slice(0, count).map((q, index) => {
+        const url = `/api/classrooms/SAT/pdf?path=${encodeURIComponent(q.path)}#page=${q.page}`;
+        return `<li><a href="${url}" target="_blank" rel="noopener">${index + 1}. ${esc(q.domain)} · ${esc(q.id)} · PDF page ${q.page}</a><br>
+          <small>${esc(q.skill)} · ${esc(q.path.split('/').pop())}${q.logged ? ' · logged attempt' : ''}</small></li>`;
+      }).join('');
+      panel.innerHTML = `<h2>Today's questions</h2>
+        <p><label for="sat-study-date">Study date</label> <select id="sat-study-date">${result.dates.map(d => `<option value="${esc(d)}" ${d === result.date ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></p>
+        <p><strong>${esc(result.focus)}</strong> · ${esc(result.instruction)}</p>
+        ${result.questions.length ? `<p>${full ? `Full set: ${result.questions.length}` : `Short set: ${count} of ${result.questions.length}`} questions. Open a PDF at the listed page and stop before its answer section.</p><ol>${items}</ol>` : '<p>The course plan calls for official practice today.</p>'}
+        ${result.questions.length > result.short_set ? `<button class="mark-done-btn" id="sat-set-size">${full ? 'Show short set' : 'Show full set'}</button>` : ''}
+        <p class="pct">Question IDs and page numbers come from the six current PDFs. A logged attempt does not imply a correct answer or mastery.</p>`;
+      panel.querySelector('#sat-study-date').addEventListener('change', event => show(event.target.value));
+      panel.querySelector('#sat-set-size')?.addEventListener('click', () => show(result.date, !full));
+    } catch (error) {
+      if (!panel.isConnected) return;
+      panel.innerHTML = `<p role="alert">Daily questions could not be loaded: ${esc(error.message)}</p>`;
+    }
+  };
+  await show();
 }
 
 // Read-only interpretation of the existing course Home, within its current route.

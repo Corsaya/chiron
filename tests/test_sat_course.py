@@ -88,6 +88,7 @@ class SatCourseTests(unittest.TestCase):
             response = client.get("/api/classrooms/SAT/plan")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.headers["cache-control"], "no-store")
+            self.assertEqual(client.get("/api/classrooms/SAT/daily-questions", params={"date": "2026-09-24"}).status_code, 422)
             self.assertEqual(client.post("/api/classrooms/SAT/plan", json={}).status_code, 405)
             self.assertEqual(client.get("/api/classrooms/SAT/note", params={"path": "../outside.md"}).status_code, 422)
             note = client.get("/api/classrooms/SAT/note", params={"path": "Current/Review.md"})
@@ -128,6 +129,7 @@ class SatCourseTests(unittest.TestCase):
             "os.environ", {"AUTH_ENABLED": "true", "LOCALHOST_BYPASS": "false"}
         ), self.client() as client:
             self.assertEqual(client.get("/api/classrooms/SAT/plan").status_code, 401)
+            self.assertEqual(client.get("/api/classrooms/SAT/daily-questions").status_code, 401)
             self.assertEqual(client.get("/api/classrooms/SAT/pdf", params={"path": "Questions/Algebra/Algebra.pdf"}).status_code, 401)
 
 
