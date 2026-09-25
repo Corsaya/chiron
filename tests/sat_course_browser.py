@@ -21,7 +21,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='a five-question practice block',exact=True).click()
  page.get_by_text('Synthetic exercise.',exact=True).wait_for()
  assert page.locator('#mark-done').count()==0
- page.get_by_role('button',name='Back to SAT plan').click()
+ page.get_by_role('button',name='Daily questions').click()
  page.get_by_role('heading',name='Next action',exact=True).wait_for()
  page.set_viewport_size({'width':390,'height':844})
  page.get_by_text('Why this?',exact=True).click()

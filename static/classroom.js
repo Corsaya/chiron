@@ -89,11 +89,12 @@ async function renderSidebar() {
           <span>${esc(c.name)}</span>
           ${prog ? `<span class="progress-pill ${prog.pct === 100 ? 'done' : ''}">${prog.done}/${prog.total}</span>` : ''}
         </div>
-        <div class="side-materials ${open ? 'open' : ''}">${materialsHtml}</div>
+        <div class="side-materials ${open ? 'open' : ''}">${open && c.name === 'SAT' ? '<button type="button" class="side-picker" id="sat-daily-link">📅 Daily questions</button>' : ''}${materialsHtml}</div>
       </div>`);
   }
   sideEl.innerHTML = parts.join('');
   document.getElementById('side-home')?.addEventListener('click', showClassrooms);
+  document.getElementById('sat-daily-link')?.addEventListener('click', () => showClassroom('SAT'));
   sideEl.querySelectorAll('[data-classroom]').forEach(el => {
     el.addEventListener('click', () => showClassroom(el.dataset.classroom));
   });
@@ -341,7 +342,7 @@ async function openNote(classroomName, path, title) {
     mainEl.innerHTML = `
       <div class="lesson-head">
         <h1 class="lesson-title">${esc(title)}</h1>
-        ${classroomName === 'SAT' ? '<button class="mark-done-btn" id="sat-back">Back to SAT plan</button>' : `<button class="mark-done-btn ${done ? 'done' : ''}" id="mark-done">${done ? '✓ Completed' : 'Mark complete'}</button>`}
+        ${classroomName === 'SAT' ? '<button class="mark-done-btn" id="sat-back">Daily questions</button>' : `<button class="mark-done-btn ${done ? 'done' : ''}" id="mark-done">${done ? '✓ Completed' : 'Mark complete'}</button>`}
       </div>
       <div class="lesson-body">${html}</div>
     `;
