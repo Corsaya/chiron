@@ -48,7 +48,7 @@ def _list_materials(dir_path: str, rel_prefix: str = "") -> List[Dict[str, Any]]
     except OSError:
         return materials
     for entry in entries:
-        if entry.name in _SKIP_DIRS or entry.name.startswith("."):
+        if entry.name in _SKIP_DIRS or entry.name.startswith(".") or entry.is_symlink():
             continue
         rel = os.path.join(rel_prefix, entry.name)
         if entry.is_dir():
@@ -88,10 +88,10 @@ def setup_classroom_routes() -> APIRouter:
     @router.get("")
     def list_classrooms(owner: str = Depends(require_user)):
         if not os.path.isdir(COURSES_ROOT):
-            return {"classrooms": []}
+            raise HTTPException(503, "Courses directory is unavailable; check the Chiron vault mount and CHIRON_COURSES_ROOT")
         classrooms = []
         for entry in sorted(os.scandir(COURSES_ROOT), key=lambda e: e.name.lower()):
-            if not entry.is_dir() or entry.name in _SKIP_DIRS or entry.name.startswith("."):
+            if entry.is_symlink() or not entry.is_dir() or entry.name in _SKIP_DIRS or entry.name.startswith("."):
                 continue
             classrooms.append({"name": entry.name, "path": entry.name})
         return {"classrooms": classrooms}

@@ -8,6 +8,15 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
+# Prefer the reorganized mega-vault when its SAT course is present. An explicit
+# CHIRON_LEARNING_DIR in .env or the environment remains authoritative.
+obsidian_dir="${OBSIDIAN_DIR:-/home/donovan/Documents/Obsidian}"
+if [[ -z "${CHIRON_LEARNING_DIR:-}" ]] && ! grep -q '^CHIRON_LEARNING_DIR=' .env 2>/dev/null; then
+    if [[ -d "$obsidian_dir/obsidian-vault/learning/Courses/SAT" ]]; then
+        export CHIRON_LEARNING_DIR="$obsidian_dir/obsidian-vault/learning"
+    fi
+fi
+
 docker_command=(docker)
 if ! docker info >/dev/null 2>&1; then
     docker_command=(sudo docker)

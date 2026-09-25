@@ -1,4 +1,8 @@
-import { mdToHtml, sanitizeAllowedHtml } from '/static/js/markdown.js';
+// Keep Classroom usable when the larger shared Markdown module cannot load.
+let markdownRenderer = null;
+import('/static/js/markdown.js').then(module => { markdownRenderer = module; }).catch(error => {
+  console.warn('Classroom Markdown renderer unavailable; showing escaped source text.', error);
+});
 
 const sideEl = document.getElementById('side');
 const mainEl = document.getElementById('main');
@@ -10,12 +14,25 @@ const tutorSendEl = document.getElementById('tutor-send');
 const icon = (type) => type === 'section' ? '📁' : type === 'custom_app' ? '🧮' : '📄';
 
 async function api(path, opts) {
-  const res = await fetch(path, { credentials: 'same-origin', ...opts });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(path, { credentials: 'same-origin', ...opts, signal: controller.signal });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    return await res.json();
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('Request timed out. Check that Chiron is running, then retry.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function renderMarkdown(source) {
+  if (markdownRenderer) return markdownRenderer.sanitizeAllowedHtml(markdownRenderer.mdToHtml(source));
+  return `<pre>${esc(source)}</pre>`;
+}
 
 // ---------------------------------------------------------------- progress --
 const PROGRESS_KEY = 'chiron_classroom_progress_v1';
@@ -134,6 +151,11 @@ async function showClassrooms() {
     renderSidebar();
   } catch (e) {
     mainEl.innerHTML = `<div class="empty">Failed to load classrooms: ${esc(e.message)}</div>`;
+    const retry = document.createElement('button');
+    retry.className = 'mark-done-btn';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', showClassrooms);
+    mainEl.appendChild(retry);
   }
 }
 
@@ -163,6 +185,11 @@ async function showClassroom(name) {
     if (name === 'SAT') await renderSatPlan();
   } catch (e) {
     mainEl.innerHTML = `<div class="empty">Failed to load classroom: ${esc(e.message)}</div>`;
+    const retry = document.createElement('button');
+    retry.className = 'mark-done-btn';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => showClassroom(name));
+    mainEl.appendChild(retry);
   }
 }
 
@@ -177,10 +204,10 @@ async function renderSatPlan() {
     const plan = await api('/api/classrooms/SAT/plan');
     if (!panel.isConnected || state.current !== 'SAT' || state.activePath) return;
     // Wiki targets are explicit source buttons below, not guessed browser URLs.
-    const render = text => sanitizeAllowedHtml(mdToHtml((text || '').replace(
+    const render = text => renderMarkdown((text || '').replace(
       /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
       (_, target, label) => label || target.split('/').pop()
-    )));
+    ));
     panel.innerHTML = `
       <h2>Next action</h2>
       <p class="pct">From your recorded course plan</p>
@@ -271,7 +298,7 @@ async function openNote(classroomName, path, title) {
     // Strip Obsidian YAML frontmatter (--- ... ---) — it's metadata for the
     // vault, not lesson content, and reads as noise dumped above the title.
     const bodyOnly = data.content.replace(/^---\n[\s\S]*?\n---\n/, '');
-    const html = sanitizeAllowedHtml(mdToHtml(bodyOnly));
+    const html = renderMarkdown(bodyOnly);
     mainEl.innerHTML = `
       <div class="lesson-head">
         <h1 class="lesson-title">${esc(title)}</h1>
@@ -351,7 +378,7 @@ async function sendTutorQuestion() {
           if (data.delta && !data.thinking) {
             if (first) { answerEl.innerHTML = ''; first = false; }
             full += data.delta;
-            answerEl.innerHTML = sanitizeAllowedHtml(mdToHtml(full));
+            answerEl.innerHTML = renderMarkdown(full);
             tutorMsgsEl.scrollTop = tutorMsgsEl.scrollHeight;
           }
         } catch (e) { /* ignore partial/non-JSON chunks */ }
@@ -376,4 +403,5 @@ tutorInputEl.addEventListener('input', () => {
 
 // ---------------------------------------------------------------- boot --
 const initial = decodeURIComponent(location.hash.replace('#/', ''));
+window.dispatchEvent(new Event('classroom-ready'));
 if (initial) showClassroom(initial); else showClassrooms();

@@ -44,6 +44,10 @@ end
 ```
 
 Then run `chiron`, `chiron logs`, `chiron stop`, or `chiron status`.
+The launcher detects `obsidian-vault/learning` when it contains `Courses/SAT`.
+For a different vault location, set `CHIRON_LEARNING_DIR` to the absolute
+host path in `.env` and rerun `chiron`. A missing Courses mount now appears
+as a Classroom API error instead of an empty course list.
 The following alias instructions apply only to Bash.
 
 For the existing nested checkout, add this to `~/.bashrc`:
