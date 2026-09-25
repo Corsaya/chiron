@@ -100,6 +100,7 @@ async function renderSidebar() {
   sideEl.querySelectorAll('.side-item[data-path]').forEach(el => {
     el.addEventListener('click', () => {
       if (el.dataset.type === 'custom_app') openApp(el.dataset.app);
+      else if (el.dataset.type === 'pdf') openPdf(state.current, el.dataset.path);
       else openNote(state.current, el.dataset.path, el.dataset.title);
     });
   });
@@ -284,6 +285,11 @@ function openApp(url) {
   // Full-page navigation, not an iframe: Odysseus sets X-Frame-Options: DENY
   // globally (core/middleware.py), which blocks framing even same-origin.
   window.location.href = url;
+}
+
+function openPdf(classroomName, path) {
+  if (classroomName !== 'SAT') return;
+  window.location.href = `/api/classrooms/SAT/pdf?path=${encodeURIComponent(path)}`;
 }
 
 // ---------------------------------------------------------------- lesson note --

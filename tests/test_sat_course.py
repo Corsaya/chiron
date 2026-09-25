@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from routes import classroom_routes
-from src.sat_course import CourseSourceError, course_plan, read_source
+from src.sat_course import CourseSourceError, course_plan, pdf_source_path, read_source
 
 
 HOME = """---
@@ -96,11 +96,39 @@ class SatCourseTests(unittest.TestCase):
             (self.root / "Home.md").unlink()
             self.assertEqual(client.get("/api/classrooms/SAT/plan").status_code, 422)
 
+    def test_pdf_listing_and_authenticated_read_rejects_escapes(self):
+        questions = self.root / "Questions/Algebra"
+        questions.mkdir(parents=True)
+        pdf = questions / "Algebra.pdf"
+        pdf.write_bytes(b"%PDF-1.4\nsynthetic")
+        outside = self.courses / "outside.pdf"
+        outside.write_bytes(b"%PDF-1.4\nprivate")
+        (questions / "linked.pdf").symlink_to(outside)
+        (self.root / "Tracking").mkdir()
+        (self.root / "Tracking/attempts.csv").write_text("header-only")
+        with self.assertRaises(CourseSourceError):
+            pdf_source_path(self.root, "Questions/Algebra/linked.pdf")
+        with patch.object(classroom_routes, "COURSES_ROOT", str(self.courses)), patch.dict(
+            "os.environ", {"AUTH_ENABLED": "false"}
+        ), self.client() as client:
+            materials = client.get("/api/classrooms/SAT").json()["materials"]
+            self.assertNotIn("Tracking", [item["name"] for item in materials])
+            questions_item = next(item for item in materials if item["name"] == "Questions")
+            self.assertEqual(questions_item["items"][0]["items"][0]["type"], "pdf")
+            response = client.get("/api/classrooms/SAT/pdf", params={"path": "Questions/Algebra/Algebra.pdf"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers["content-type"], "application/pdf")
+            self.assertEqual(response.headers["cache-control"], "no-store")
+            self.assertEqual(response.content, pdf.read_bytes())
+            for path in ("../outside.pdf", "Questions/Algebra/linked.pdf", "Current/Practice.md"):
+                self.assertEqual(client.get("/api/classrooms/SAT/pdf", params={"path": path}).status_code, 422)
+
     def test_routes_require_authentication(self):
         with patch.object(classroom_routes, "COURSES_ROOT", str(self.courses)), patch.dict(
             "os.environ", {"AUTH_ENABLED": "true", "LOCALHOST_BYPASS": "false"}
         ), self.client() as client:
             self.assertEqual(client.get("/api/classrooms/SAT/plan").status_code, 401)
+            self.assertEqual(client.get("/api/classrooms/SAT/pdf", params={"path": "Questions/Algebra/Algebra.pdf"}).status_code, 401)
 
 
 if __name__ == "__main__":

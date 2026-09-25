@@ -15,8 +15,9 @@ from typing import Any, Dict, List
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi.responses import FileResponse
 from src.auth_helpers import require_user
-from src.sat_course import CourseSourceError, course_plan, read_source
+from src.sat_course import CourseSourceError, course_plan, pdf_source_path, read_source
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ def _custom_app_for(filename: str) -> str | None:
     return None
 
 
-def _list_materials(dir_path: str, rel_prefix: str = "") -> List[Dict[str, Any]]:
+def _list_materials(dir_path: str, rel_prefix: str = "", *, sat_pdfs: bool = False) -> List[Dict[str, Any]]:
     materials = []
     try:
         entries = sorted(os.scandir(dir_path), key=lambda e: e.name.lower())
@@ -52,12 +53,14 @@ def _list_materials(dir_path: str, rel_prefix: str = "") -> List[Dict[str, Any]]
             continue
         rel = os.path.join(rel_prefix, entry.name)
         if entry.is_dir():
-            materials.append({
-                "type": "section",
-                "name": entry.name,
-                "path": rel,
-                "items": _list_materials(entry.path, rel),
-            })
+            items = _list_materials(entry.path, rel, sat_pdfs=sat_pdfs)
+            if items:
+                materials.append({
+                    "type": "section", "name": entry.name,
+                    "path": rel, "items": items,
+                })
+        elif sat_pdfs and entry.name.lower().endswith(".pdf") and rel_prefix.startswith("Questions/"):
+            materials.append({"type": "pdf", "name": entry.name, "path": rel})
         elif entry.name.endswith(".md"):
             custom_app = _custom_app_for(entry.name)
             materials.append({
@@ -108,8 +111,23 @@ def setup_classroom_routes() -> APIRouter:
             raise HTTPException(404, "Classroom not found")
         return {
             "name": classroom_name,
-            "materials": _list_materials(classroom_dir),
+            "materials": _list_materials(classroom_dir, sat_pdfs=classroom_name == "SAT"),
         }
+
+    @router.get("/{classroom_name}/pdf")
+    def get_pdf(classroom_name: str, path: str, owner: str = Depends(require_user)):
+        if classroom_name != "SAT":
+            raise HTTPException(404, "PDF is unavailable")
+        root = Path(COURSES_ROOT) / "SAT"
+        if root.is_symlink():
+            raise HTTPException(403, "Linked SAT course roots are not allowed")
+        try:
+            pdf = pdf_source_path(root, path)
+        except CourseSourceError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return FileResponse(pdf, media_type="application/pdf", headers={
+            "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+        })
 
     @router.get("/{classroom_name}/note")
     def get_note(classroom_name: str, path: str, owner: str = Depends(require_user)):

@@ -51,6 +51,27 @@ def read_source(root: Path, relative: str) -> dict:
     }
 
 
+def pdf_source_path(root: Path, relative: str) -> Path:
+    """Locate a course PDF without allowing linked or escaping paths."""
+    root = root.resolve()
+    relative_path = Path(relative)
+    if (relative_path.is_absolute() or not relative_path.parts or relative_path.parts[0] != "Questions" or any(
+        part in ("..", "locked") or part.startswith(".")
+        for part in relative_path.parts
+    )):
+        raise CourseSourceError("PDF path is not allowed")
+    current = root
+    for part in relative_path.parts:
+        current = current / part
+        if current.is_symlink():
+            raise CourseSourceError("Linked PDF paths are not allowed")
+    if current.suffix.lower() != ".pdf" or not current.is_file():
+        raise CourseSourceError("PDF is unavailable")
+    if current.stat().st_size > 30_000_000:
+        raise CourseSourceError("PDF is too large")
+    return current
+
+
 def section(text: str, heading: str) -> str | None:
     lines = text.splitlines()
     captured = []
