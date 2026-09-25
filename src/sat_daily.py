@@ -47,18 +47,20 @@ def _index(root: Path) -> list[dict]:
     return data["questions"]
 
 
-def _logged(root: Path) -> tuple[set[str], list[str]]:
+def _logged(root: Path) -> tuple[dict[str, str], list[str]]:
     path = root / "Tracking" / "attempts.csv"
     if path.is_symlink() or not path.is_file():
-        return set(), []
-    attempted = set()
+        return {}, []
+    attempted = {}
     misses = []
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             identifier = (row.get("question_id") or "").strip().lower()
             if not identifier:
                 continue
-            attempted.add(identifier)
+            attempt_date = (row.get("date") or "").strip()
+            if identifier not in attempted or (attempt_date and (not attempted[identifier] or attempt_date < attempted[identifier])):
+                attempted[identifier] = attempt_date
             if (row.get("correct") or "").strip().lower() in {"0", "false", "no", "n"}:
                 misses.append(identifier)
     return attempted, list(dict.fromkeys(reversed(misses)))
@@ -74,31 +76,41 @@ def daily_questions(root: Path, day: str | None = None) -> dict:
     if not START <= target <= END or day != target.isoformat():
         raise CourseSourceError("Study date is outside this SAT plan")
     questions = _index(root)
-    attempted, misses = _logged(root)
+    attempt_dates, misses = _logged(root)
     used = set()
+    used_ids = set()
     selections = {}
     for scheduled_day, (_, groups) in SCHEDULE.items():
         batches = []
         for domain, skill, count in groups:
-            candidates = [q for q in questions if q["domain"] == domain and q["skill"].startswith(skill) and (q["path"], q["page"]) not in used]
+            candidates = [q for q in questions if q["domain"] == domain and q["skill"].startswith(skill) and (q["path"], q["page"]) not in used and q["id"] not in used_ids and not (attempt_dates.get(q["id"]) and attempt_dates[q["id"]] < scheduled_day)]
             if len(candidates) < count:
                 raise CourseSourceError("SAT question locator lacks enough questions")
             chosen = candidates[:count]
             batches.append(chosen)
             for question in chosen:
                 used.add((question["path"], question["page"]))
+                used_ids.add(question["id"])
         selections[scheduled_day] = [q for row in zip_longest(*batches) for q in row if q] if batches else []
+    from_log = False
     if day == "2026-10-02":
-        by_id = {q["id"]: q for q in questions}
-        picks = [by_id[identifier] for identifier in misses if identifier in by_id][:12]
+        by_id = {}
+        duplicates = set()
+        for question in questions:
+            if question["id"] in by_id:
+                duplicates.add(question["id"])
+            else:
+                by_id[question["id"]] = question
+        picks = [by_id[identifier] for identifier in misses if identifier in by_id and identifier not in duplicates][:12]
+        from_log = bool(picks)
         if not picks:
             # No false claim of past misses: offer a small unfamiliar mixed fallback.
-            batches = [[q for q in questions if q["domain"] == domain and (q["path"], q["page"]) not in used][:2] for domain in DOMAINS]
+            batches = [[q for q in questions if q["domain"] == domain and (q["path"], q["page"]) not in used and q["id"] not in attempt_dates and q["id"] not in used_ids][:2] for domain in DOMAINS]
             picks = [q for row in zip_longest(*batches) for q in row if q]
         selections[day] = picks
-    picks = [{**q, "logged": q["id"] in attempted} for q in selections[day]]
+    picks = [{**q, "logged": q["id"] in attempt_dates} for q in selections[day]]
     return {
         "date": day, "focus": SCHEDULE[day][0], "instruction": INSTRUCTIONS.get(day, "Attempt the questions timed before checking the answers; then review misses and slow items in the existing attempt log."),
         "questions": picks, "short_set": min(4, len(picks)), "source": "Courses/SAT/Questions/question-index.json",
-        "dates": list(SCHEDULE), "review_from_log": day == "2026-10-02" and bool(misses),
+        "dates": list(SCHEDULE), "review_from_log": from_log,
     }
