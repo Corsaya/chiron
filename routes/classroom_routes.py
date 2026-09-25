@@ -103,6 +103,8 @@ def setup_classroom_routes() -> APIRouter:
         if os.path.commonpath([classroom_dir, courses_root_abs]) != courses_root_abs:
             raise HTTPException(403, "Invalid classroom path")
         if not os.path.isdir(classroom_dir):
+            if classroom_name == "SAT":
+                raise HTTPException(404, "SAT course is missing from the mounted learning vault. Set CHIRON_LEARNING_DIR to the parent of Courses and recreate Chiron.")
             raise HTTPException(404, "Classroom not found")
         return {
             "name": classroom_name,
